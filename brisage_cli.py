@@ -416,6 +416,8 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
     if not focus:
         results = {}
         for stat_name, value in stats_dict.items():
+            if stat_name in {"PA", "PM", "PO", "Invocations"} and value >= 0 and value <= 1:
+                value = 1
             if value <= 0:
                 continue
             poids_rune = POIDS_RUNES.get(stat_name, 1)
@@ -425,9 +427,13 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
 
             # Conversion en runes
             nb_runes_float = poids / poids_rune
-            nb_runes = int(nb_runes_float)
-            reste_float  = (poids % poids_rune) / poids_rune * 100.0
-            reste = int(reste_float)
+            if poids_rune < 1:
+                nb_runes = int(poids)
+                reste = (poids - nb_runes) * 100.0
+            else:
+                nb_runes = int(nb_runes_float)
+                reste_float  = (poids % poids_rune) / poids_rune * 100.0
+                reste = int(reste_float)
             results[stat_name] = (nb_runes, reste)
         return results
 
@@ -448,6 +454,8 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
     poids_others = 0.0
 
     for stat_name, value in stats_dict.items():
+        if stat_name in {"PA", "PM", "PO", "Invocations"} and value >= 0 and value <= 1:
+            value = 1
         if value <= 0:
             continue
         poids_rune = POIDS_RUNES.get(stat_name, 1)
@@ -465,12 +473,15 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
     total *= (coefficient / 100.0)
 
     # 5) Convertir ce total en runes de la stat focus
-    poids_rune_focus = POIDS_RUNES.get(focus_stat, 1)
-    nb_runes_float = total
-    nb_runes = int(nb_runes_float)
-    reste_float = (total % poids_rune_focus) / poids_rune_focus * 100.0
-    reste = int(reste_float)
-
+    if poids_rune < 1:
+        nb_runes = int(poids)
+        reste = (poids - nb_runes) * 100.0
+    else:
+        poids_rune_focus = POIDS_RUNES.get(focus_stat, 1)
+        nb_runes_float = total
+        nb_runes = int(nb_runes_float)
+        reste_float = (total % poids_rune_focus) / poids_rune_focus * 100.0
+        reste = int(reste_float)
     return {focus_stat: (nb_runes, reste)}
 
 def display_table(results, title="Résultats du brisage"):
