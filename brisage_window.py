@@ -285,12 +285,13 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
             poids_others += w
     total = poids_focus + 0.5 * poids_others
     total *= (coefficient / 100.0)
-    if poids_rune < 1:
+
+    if POIDS_RUNES.get(focus_stat, 1) < 1:
         nb_runes = int(total)
         reste = (total - nb_runes) * 100.0
     else:
         poids_rune_focus = POIDS_RUNES.get(focus_stat, 1)
-        nb_runes_float = total
+        nb_runes_float = total / poids_rune_focus
         nb_runes = int(nb_runes_float)
         reste = int(((total % poids_rune_focus) / poids_rune_focus * 100.0))
     return {focus_stat: (nb_runes, reste)}
@@ -404,6 +405,17 @@ class BrisageApp(tk.Tk):
             lvl = item.get("level", "?")
             self.items_listbox.insert(tk.END, f"{idx}) {name_obj} (niveau {lvl})")
     
+    def update_focus_combobox(self):
+        stats_in_equipment = []
+        for s in self.stats_list:
+            if s["max"] > 0:
+                stat = s["statName"]
+                if stat not in stats_in_equipment:
+                    stats_in_equipment.append(stat)
+        stats_focus_options = ["Aucune"] + stats_in_equipment
+        self.focus_combobox['values'] = stats_focus_options
+        self.focus_combobox.set("Aucune")
+
     def select_item(self):
         try:
             index = self.items_listbox.curselection()[0]
@@ -417,8 +429,10 @@ class BrisageApp(tk.Tk):
             messagebox.showerror("Erreur", f"Erreur lors de la récupération des détails : {e}")
             return
         self.stats_list = parse_item_stats(self.item_details)
+        self.update_focus_combobox()
         self.populate_options()
         self.show_frame(self.options_frame)
+    
     
     # --- Frame des options (théorique vs manuel) ---
     def create_options_frame(self):
@@ -454,8 +468,13 @@ class BrisageApp(tk.Tk):
                              bg=self.bg_color, fg=self.fg_color)
         lbl_focus.grid(row=0, column=0, padx=10)
 
-        # Liste des stats disponibles + "Aucune"
-        stats_focus_options = ["Aucune"] + sorted(POIDS_RUNES.keys(), key=str.lower)
+        # Construire la liste des stats issues de l'équipement choisi
+        stats_in_equipment = []
+        for s in self.stats_list:
+            stat = s["statName"]
+            if stat not in stats_in_equipment:
+                stats_in_equipment.append(stat)
+        stats_focus_options = ["Aucune"] + stats_in_equipment
         # Combobox (liste déroulante) au lieu d'un Entry
         self.focus_combobox = ttk.Combobox(
             focus_frame,
