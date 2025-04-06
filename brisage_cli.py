@@ -344,6 +344,8 @@ def parse_item_stats(item_data):
         operator = eff.get("characteristicOperator", "+")
         val_from = eff.get("from", 0)
         val_to   = eff.get("to", 0)
+        if val_to == 0:
+            val_to = val_from
         real_min = min(val_from, val_to)
         real_max = max(val_from, val_to)
         
