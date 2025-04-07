@@ -5,7 +5,11 @@ import math
 from rich.console import Console
 from rich.table import Table
 
-ALLOWED_EQUIPMENT_NAMES = {"amulette", "anneau", "arme", "bottes", "bouclier", "cape", "ceinture", "chapeau""arc", "baguette", "bâton", "dague", "épée", "marteau", "pelle", "hache", "outil", "pioche", "faux", "arme magique", "lance"}
+ALLOWED_EQUIPMENT_NAMES = {
+    "amulette", "anneau", "arme", "bottes", "bouclier", "cape", "ceinture",
+    "chapeau", "arc", "baguette", "bâton", "dague", "épée", "marteau", "pelle",
+    "hache", "outil", "pioche", "faux", "arme magique", "lance"
+}
 
 # Mapping des effectId vers le nom de la stat tel qu’indiqué sur les items
 EFFECT_ID_TO_STAT = {
@@ -269,40 +273,29 @@ def search_items_by_name(name, lang="fr"):
     params = {
         f"slug.{lang}[$search]": normalized_input,
         "lang": lang,
-        "$limit": 50,  
-        "$skip": 0    
+        "$limit": 50,
+        "$skip": 0
     }
     all_data = []
-    
     while True:
         resp = requests.get(base_url, params=params)
         resp.raise_for_status()
         response_json = resp.json()
         data = response_json.get("data", [])
         all_data.extend(data)
-    
         if len(data) < params["$limit"]:
             break
-        
-        params["$skip"] = params["$skip"] + params["$limit"]
-    
-    
-    # Filtrage local par nom (insensible aux accents et casse)
+        params["$skip"] += params["$limit"]
     wanted = normalize_text(name)
     filtered = [item for item in all_data
                 if isinstance(item, dict) and wanted in normalize_text(item.get("name", {}).get(lang, ""))]
-    
-    # Filtrer par type d'équipement autorisé
     allowed = {s.lower() for s in ALLOWED_EQUIPMENT_NAMES}
     final_results = []
     for item in filtered:
         type_name = item.get("type", {}).get("name", {}).get(lang, "")
         if type_name.lower() in allowed:
             final_results.append(item)
-
-    
     return final_results
-
 def select_item_interactively(items, lang="fr"):
     if not items:
         print("Aucun objet correspondant n'a été trouvé.")
@@ -334,23 +327,27 @@ def parse_item_stats(item_data):
     effects = item_data.get("effects", [])
     stats = []
     ALWAYS_USE_MAX = {111, 128, 117, 182}  # PA, PM, PO, Invocations
+    NO_VALUE_EFFECTS = {795}
 
     for eff in effects:
         effect_id = eff.get("effectId")
         info = EFFECT_ID_TO_STAT.get(effect_id)
         if not info:
-            continue
+            continue            
         stat_name = info  # Ici, vous pouvez stocker le nom sans signe
         operator = eff.get("characteristicOperator", "+")
         val_from = eff.get("from", 0)
         val_to   = eff.get("to", 0)
+        if effect_id in NO_VALUE_EFFECTS:
+            val_from = 1
+            val_to = 1
         if val_to == 0:
             val_to = val_from
         real_min = min(val_from, val_to)
         real_max = max(val_from, val_to)
         
         # Si c'est un effet pour lequel vous forcez la valeur max (PA, etc.)
-        if effect_id in {111, 128, 117, 182} and val_to > 0:
+        if effect_id in ALWAYS_USE_MAX and val_to > 0:
             real_min = val_to
             real_max = val_to
 
@@ -360,7 +357,7 @@ def parse_item_stats(item_data):
             if real_min >= 0:
                 real_min = -real_min
                 real_max = -real_max
-
+        print(f"Stat : {stat_name}, min: {real_min}, max: {real_max}")
         stats.append({
             "statName": stat_name,
             "min": real_min,
@@ -456,8 +453,6 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
     poids_others = 0.0
 
     for stat_name, value in stats_dict.items():
-        if stat_name in {"PA", "PM", "PO", "Invocations"} and value >= 0 and value <= 1:
-            value = 1
         if value <= 0:
             continue
         poids_rune = POIDS_RUNES.get(stat_name, 1)

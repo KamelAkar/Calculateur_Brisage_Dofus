@@ -215,6 +215,8 @@ def parse_item_stats(item_data):
     effects = item_data.get("effects", [])
     stats = []
     ALWAYS_USE_MAX = {111, 128, 117, 182}  # PA, PM, PO, Invocations
+    NO_VALUE_EFFECTS = {795}
+
     for eff in effects:
         effect_id = eff.get("effectId")
         info = EFFECT_ID_TO_STAT.get(effect_id)
@@ -224,6 +226,9 @@ def parse_item_stats(item_data):
         operator = eff.get("characteristicOperator", "+")
         val_from = eff.get("from", 0)
         val_to   = eff.get("to", 0)
+        if effect_id in NO_VALUE_EFFECTS:
+            val_from = 1
+            val_to = 1
         if val_to == 0:
             val_to = val_from
         real_min = min(val_from, val_to)
@@ -247,8 +252,6 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
     if not focus:
         results = {}
         for stat_name, value in stats_dict.items():
-            if stat_name in {"PA", "PM", "PO", "Invocations"} and value >= 0 and value <= 1:
-                value = 1
             if value <= 0:
                 continue
             poids_rune = POIDS_RUNES.get(stat_name, 1)
@@ -413,7 +416,7 @@ class BrisageApp(tk.Tk):
         for s in self.stats_list:
             if s["max"] > 0:
                 stat = s["statName"]
-                if stat not in stats_in_equipment:
+                if stat not in stats_in_equipment and stat != "Arme de chasse":
                     stats_in_equipment.append(stat)
         stats_focus_options = ["Aucune"] + stats_in_equipment
         self.focus_combobox['values'] = stats_focus_options
