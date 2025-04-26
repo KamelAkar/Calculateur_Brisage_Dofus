@@ -255,6 +255,9 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
             if value <= 0:
                 continue
             poids_rune = POIDS_RUNES.get(stat_name, 1)
+            if stat_name == "Pods":
+                # Si la stat est "Pods" on divise value par 2.5
+                value = value / 2.5
             poids = ((value * poids_rune * level * 0.0150) + 1)
             poids *= (coefficient / 100.0)
 
@@ -284,6 +287,9 @@ def calculate_brissage(stats_dict, level, coefficient=100.0, focus=None):
         if value <= 0:
             continue
         poids_rune = POIDS_RUNES.get(stat_name, 1)
+        if stat_name == "Pods":
+            # Si la stat est "Pods" on divise value par 2.5
+            value = value / 2.5
         w = ((value * poids_rune * level * 0.0150) + 1)
         if stat_name.lower() == focus.lower():
             poids_focus += w
